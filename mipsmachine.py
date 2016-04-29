@@ -13,21 +13,23 @@ MIPS_AL = {'add' : '+', 'addi' : '+', 'sub' : '-', 'subi' : '-',
 		   'sllv': '<<', 'slrv': '>>'} 
 MIPS_SAL = {'abs': 'abs', 'not': '~', 'neg': '-'}
 MIPS_COND = {'seq': '==', 'sge': '>=', 'sgt': '>', 'sle': '<=', 'slt': '<'}
+MIPS_REGS = ('zero', 'at', 'v0', 'v1', 'a0', 'a1', 'a2', 'a3', 't0', 't1', 
+             't2', 't3', 't4', 't5', 't6', 't7', 's0', 's1', 's2', 's3', 
+             's4', 's5', 's6', 's7', 't8', 't9', 'k0', 'k1', 'gp', 'sp', 
+             'fp', 'ra')
 
 #Every line of code except empty is an instruction
 class Instruction:
-	def __init__(self, text, lineno):
-		self.text = text
-		if self.text.endswith(':'):
-			self.name = self.text[:-1]
-			self.cmd = "nop"
-			self.args = []
+	def __init__(self, code, label = None):
+		if code.strip() == "" or code == None:
+			self.text = "nop"
 		else:
-			self.name = None
-			self.raw = self.text.split(' ', 1)
-			self.cmd = self.raw[0].lower()
-			if len(self.raw) > 1:
-				self.args = [x.strip().lower() for x in  self.raw[1].split(',')]
+			self.text = code
+		self.label = label
+		self.raw = self.text.split(' ', 1)
+		self.cmd = self.raw[0].lower()
+		if len(self.raw) > 1:
+			self.args = [x.strip().lower() for x in self.raw[1].split(',')]
 
 		if self.cmd in MIPS_ILIST: 
 			self.fmt = MIPS_I
@@ -35,7 +37,6 @@ class Instruction:
 			self.fmt = MIPS_J
 		else: 
 			self.fmt = MIPS_R
-		self.addr = lineno
 			
 			#self.cmd, self.args = self.text.split(' ', 1)
 			#self.args = [x.strip() for x in self.args.split(',')]
@@ -66,6 +67,7 @@ class Instruction:
 		instr = []
 		mode = 0
 		curline = 0x0000
+		lastlabel = None
 		with open(filename, 'r') as f:
 			for line in f:
 				line = line.strip()
@@ -80,33 +82,57 @@ class Instruction:
 				if mode == 0:
 					exit("Text outside .data or .text block")
 				if mode == MODE_TEXT:
-					instr.append(Instruction(line, curline))
+					if ':' in line:
+						label, line = line.split(':', 1)
+						lastlabel = label
+						if line == "":
+							curline += 1
+							continue
+					instr.append(Instruction(line, lastlabel))
+					lastlabel = None
 				curline += 1
 		return instr
 
 
 class MipsMachine:
 	def __init__(self, iset):
-		self.memory = collections.OrderedDict([x*4, 0] for x in range(0xffc/4))
+		self.nopinstr = Instruction("nop")
+		self.maxinstr = 0x1ffc
+		self.rawiset = iset
+		self.reset()
+
+	def reset(self):
+		self.memory = collections.OrderedDict([x*4, self.nopinstr] for x in range(self.maxinstr/4))
 		self.regsrc1 = self.regsrc2 = self.regdst = None
 		self.imm = self.regbase = self.regaux = None
 		self.result = None
 		self.jumps = {}
+		self.output = ""
 		curline = 0x1000
-		for i in iset:
+		for i in self.rawiset:
 			self.memory[curline] = i
-			if i.name != None:
-				self.jumps[i.name] = curline
+			if i.label != None:
+				self.jumps[i.label] = curline
 			curline += 4
 		self.regs = {}
 		self.regs["pc"] = 0x1000
+
+	def allregs(self):
+		return MIPS_REGS
+
+	def memoryrange(self, start=0, end=0):
+		result = collections.OrderedDict([x*4, 0] for x in range(start, end))
+		#for i in range(start, end, 4):
+		return result
+			
 
 	def step(self):
 		self.ifstage()
 		if self.instruction.cmd == "syscall":
 			self.syscall()
-			self.instruction.cmd = "nop"
-		print self.instruction
+			return
+		if self.instruction.cmd == "nop":
+			return
 		self.idstage()
 		self.exstage()
 		self.memstage()
@@ -177,9 +203,21 @@ class MipsMachine:
 				return 0
 		else:
 			self.regs[name] = value
+
+	def mem(self, pos, value = None):
+		if value == None:
+			if pos in self.memory:
+				return self.memory[pos]
+			else:
+				return None
+		else:
+			pass
+			#self.regs[name] = value
 	
 	def syscall(self):
 		v0 = self.regs["v0"]
+		if v0 == 1:
+			self.output += "%d" % (self.reg("a0"))
 		if v0 == 10:
 			exit("Exiting")
 
