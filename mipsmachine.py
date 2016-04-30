@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys, os, collections
+from mipscoder import MipsCoder
 
 MODE_DATA = 1
 MODE_TEXT = 2
@@ -30,6 +31,8 @@ class Instruction:
 		self.cmd = self.raw[0].lower()
 		if len(self.raw) > 1:
 			self.args = [x.strip().lower() for x in self.raw[1].split(',')]
+		else:
+			self.args = []
 
 		if self.cmd in MIPS_ILIST: 
 			self.fmt = MIPS_I
@@ -40,6 +43,9 @@ class Instruction:
 			
 			#self.cmd, self.args = self.text.split(' ', 1)
 			#self.args = [x.strip() for x in self.args.split(',')]
+
+	def getopcode(self):
+		return self.text
 
 	def getarg(self, n):
 		return self.args[n]
@@ -107,6 +113,7 @@ class MipsMachine:
 		self.imm = self.regbase = self.regaux = None
 		self.result = None
 		self.jumps = {}
+		self.breakpoints = []
 		self.output = ""
 		curline = 0x1000
 		for i in self.rawiset:
@@ -181,7 +188,7 @@ class MipsMachine:
 		elif i.fmt == MIPS_R and i.cmd in MIPS_AL.keys():
 			self.result = eval(str(self.regsrc1) + ' ' + MIPS_AL[i.cmd] + ' ' + str(self.regsrc2))
 		elif i.fmt == MIPS_I and i.cmd in MIPS_AL.keys():
-			print i.cmd, str(self.regaux) + ' ' + MIPS_AL[i.cmd] + ' ' + str(self.imm)
+			#print i.cmd, str(self.regaux) + ' ' + MIPS_AL[i.cmd] + ' ' + str(self.imm)
 			self.result = eval(str(self.regaux) + ' ' + MIPS_AL[i.cmd] + ' ' + str(self.imm))
 
 	def memstage(self):
@@ -209,7 +216,7 @@ class MipsMachine:
 			if pos in self.memory:
 				return self.memory[pos]
 			else:
-				return None
+				return self.nopinstr
 		else:
 			pass
 			#self.regs[name] = value

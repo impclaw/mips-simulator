@@ -5,6 +5,7 @@ from regwidget import RegWidget
 from codewidget import CodeWidget
 from memwidget import MemWidget
 from iowidget import IOWidget
+from mipscoder import MipsCoder
 
 class MainWindow(QMainWindow):
 	def __init__(self, parent = None):
@@ -12,25 +13,36 @@ class MainWindow(QMainWindow):
 		self.setWindowTitle("MIPS Simulator")
 		instr = Instruction.fromfile('tests/test1.s')
 		self.mips = MipsMachine(instr)
+		print MipsCoder.decode(self.mips.nopinstr)
 		self.codewidget = CodeWidget(self)
 		self.memwidget = MemWidget(self)
 		self.regwidget = RegWidget(self)
+		self.iolabel = QLabel("Output: ")
+		self.iolabel.setMaximumHeight(14)
 		self.iowidget = IOWidget(self)
 		self.statusBar().showMessage("Ready")
 		self.runtimer = QTimer(self)
 		self.runtimer.timeout.connect(self.runtimerTick)
+		self.mainlayout = QVBoxLayout()
+		self.sidelayout = QVBoxLayout()
 
-		self.grid = QGridLayout()
+		self.grid = QHBoxLayout()
 		self.grid.setSpacing(2)
 		self.widget = QWidget(self)
 		self.widget.setLayout(self.grid)
 		self.setCentralWidget(self.widget)
 
-		self.grid.addWidget(self.codewidget, 0, 0, 2, 1)
-		self.grid.addWidget(self.regwidget, 0, 1)
-		self.grid.addWidget(self.memwidget, 1, 1)
-		self.grid.addWidget(self.iowidget, 2, 0, 1, 2)
+		self.mainlayout.addWidget(self.codewidget)
+		self.mainlayout.addWidget(self.iolabel)
+		self.mainlayout.addWidget(self.iowidget)
+		self.sidelayout.addWidget(self.regwidget)
+		self.sidelayout.addWidget(self.memwidget)
+		self.grid.addLayout(self.mainlayout)
+		self.grid.addLayout(self.sidelayout)
 		self.grid.setContentsMargins(0, 0, 0, 0)
+
+		#prefpolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+		#self.setSizePolicy(prefpolicy)
 
 		self.createToolBar()
 
@@ -58,6 +70,7 @@ class MainWindow(QMainWindow):
 
 	def reload(self):
 		self.iowidget.reload()
+		self.memwidget.update()
 		self.memwidget.repaint()
 		self.regwidget.repaint()
 
