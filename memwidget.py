@@ -3,35 +3,80 @@ from PyQt4.QtCore import *
 from mipscoder import MipsCoder
 from __builtin__ import hex
 
-class MemWidget(QWidget):
-	def __init__(self, parent):
-		QWidget.__init__(self, parent)
-		self.parent = parent
-		self.vb = QHBoxLayout()
-		self.setLayout(self.vb)
-		self.scroll = QScrollBar()
-		self.memwidget = InternalMemWidget(parent)
-		self.vb.addWidget(self.memwidget)
-		self.vb.addWidget(self.scroll)
-		self.vb.setContentsMargins(0, 0, 0, 0)
-		self.scroll.setMinimum(0)
-		self.update()
-		self.scroll.valueChanged.connect(self.scrolled)
+#class MemWidget(QWidget):
+#	def __init__(self, parent):
+#		QWidget.__init__(self, parent)
+#		self.parent = parent
+#		self.vb = QHBoxLayout()
+#		self.setLayout(self.vb)
+#		self.scroll = QScrollBar()
+#		self.memwidget = InternalMemWidget(parent)
+#		self.vb.addWidget(self.memwidget)
+#		self.vb.addWidget(self.scroll)
+#		self.vb.setContentsMargins(0, 0, 0, 0)
+#		self.scroll.setMinimum(0)
+#		self.update()
+#		self.scroll.valueChanged.connect(self.scrolled)
+#
+#	def scrolled(self):
+#		self.memwidget.scroll = self.scroll.value()
+#		self.memwidget.repaint()
+#
+#	def update(self):
+#		self.scroll.setMaximum(len(self.parent.mips.memory))
+#		value = self.scroll.value()
+#		if self.memwidget.followpc:
+#			pc = self.parent.mips.reg("pc")
+#			value = pc / 4
+#		self.scroll.setValue(value)
+#		self.memwidget.scroll = self.scroll.value()
 
-	def scrolled(self):
-		self.memwidget.scroll = self.scroll.value()
-		self.memwidget.repaint()
+class MemListModel(QAbstractTableModel):
+	def __init__(self, mips, parent = None):
+		QAbstractTableModel.__init__(self, parent)
+		self.mips = mips
+		self.showtype = MemWidget.SHOWTYPE_INT
 
-	def update(self):
-		self.scroll.setMaximum(len(self.parent.mips.memory))
-		value = self.scroll.value()
-		if self.memwidget.followpc:
-			pc = self.parent.mips.reg("pc")
-			value = pc / 4
-		self.scroll.setValue(value)
-		self.memwidget.scroll = self.scroll.value()
+	def rowCount(self, parent):
+		return len(self.mips.memory)
 
-class InternalMemWidget(QWidget):
+	def columnCount(self, parent):
+		return 4
+
+	def setShowType(self, showtype):
+		pass
+
+	def data(self, index, role):
+		#print index.column(), index.row()
+		instr = self.mips.memoryat(index.row()*4)
+		if index.column() == 0:
+			return hex(index.row()*4)
+		elif index.column() == 1:
+			return instr.label+':' if instr.label != None else ""
+		elif index.column() == 2:
+			instrtxt = ""
+			if self.showtype == MemWidget.SHOWTYPE_OP:
+				instrtxt = instr.getopcode()
+			elif self.showtype == MemWidget.SHOWTYPE_ASCII:
+				decoded =  MipsCoder.decode(instr)
+				instrtxt = chr((decoded >> 24) & 0xFF) + chr((decoded >> 16) & 0xFF) + \
+						   chr((decoded >> 8) & 0xFF) + chr((decoded) & 0xFF)
+			elif self.showtype == MemWidget.SHOWTYPE_INT:
+				instrtxt = MipsCoder.decode(instr)
+			elif self.showtype == MemWidget.SHOWTYPE_HEX:
+				instrtxt = hex(MipsCoder.decode(instr))
+			return instrtxt
+
+	def headerData(self, section, orientation, role):
+		if section == 0: return "Address"
+		if section == 1: return "Label"
+		if section == 2: return "Contents"
+		pass
+
+	def flags(self, index):
+		return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+class MemWidget(QTableView):
 	SHOWTYPE_OP = 1
 	SHOWTYPE_ASCII = 2
 	SHOWTYPE_INT = 3
@@ -46,12 +91,15 @@ class InternalMemWidget(QWidget):
 		self.rowcolor = QColor(255, 255, 210)
 		self.rowaltcolor = QColor(240, 240, 190)
 		self.pccolor = QColor(210, 210, 250)
-		self.setMaximumWidth(300)
-		self.setMinimumWidth(300)
-		self.memfont = QFont('Monospace', 10)
 		self.setupmenu()
-		self.showtype = InternalMemWidget.SHOWTYPE_OP
+		self.showtype = MemWidget.SHOWTYPE_OP
 		self.menushowop.setChecked(True)
+		self.model = MemListModel(self.parent.mips, self)
+		self.setModel(self.model)
+		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.setShowGrid(False)
+		self.verticalHeader().setVisible(False)
+		self.setFont(QFont('Monospace', 10))
 
 	def setupmenu(self):
 		self.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -93,22 +141,22 @@ class InternalMemWidget(QWidget):
 		self.repaint()
 
 	def menuShowOpClicked(self, checked):
-		self.showtype = InternalMemWidget.SHOWTYPE_OP
+		self.showtype = MemWidget.SHOWTYPE_OP
 		self.uncheckShow()
 		self.menushowop.setChecked(True)
 
 	def menuShowAsciiClicked(self, checked):
-		self.showtype = InternalMemWidget.SHOWTYPE_ASCII
+		self.showtype = MemWidget.SHOWTYPE_ASCII
 		self.uncheckShow()
 		self.menushowascii.setChecked(True)
 
 	def menuShowIntClicked(self, checked):
-		self.showtype = InternalMemWidget.SHOWTYPE_INT
+		self.showtype = MemWidget.SHOWTYPE_INT
 		self.uncheckShow()
 		self.menushowint.setChecked(True)
 
 	def menuShowHexClicked(self, checked):
-		self.showtype = InternalMemWidget.SHOWTYPE_HEX
+		self.showtype = MemWidget.SHOWTYPE_HEX
 		self.uncheckShow()
 		self.menushowhex.setChecked(True)
 
@@ -117,60 +165,60 @@ class InternalMemWidget(QWidget):
 		point = QPoint(gpoint.x()+2, gpoint.y()+2)
 		self.popMenu.exec_(point) 
 
-	def mousePressEvent(self, event):
-		lineno = (event.y() - 24) / 12
-
-	def mouseDoubleClickEvent(self, event):
-		lineno = (event.y() - 24) / 12
-		if event.button() == 1:
-			pc = self.parent.mips.reg('pc')
-			self.parent.mips.breakpoints.append(pc/4-(self.h/14/2)+lineno*4)
-			print hex(self.parent.mips.breakpoints[-1])
-			self.repaint()
-
-	def paintEvent(self, event):
-			painter = QPainter()
-			painter.begin(self)
-			painter.setFont(self.memfont)
-			
-			w = event.rect().width()
-			h = event.rect().height()
-			self.h = h
-			self.w = w
-			painter.fillRect(event.rect(), QBrush(self.backcolor))
-			pc = self.parent.mips.reg('pc')
-			instr = self.parent.mips.memoryrange(start=self.scroll - (h/14/2), end=self.scroll + (h/14/2))
-			ybase = 4 + 20
-			painter.fillRect(0, ybase-6, w, h, self.rowcolor)
-			painter.drawLine(0, ybase-6, w, ybase-6)
-			painter.drawText(4, 14, "Simulator Memory")
-			n = 0
-			for i in instr:
-				x = 0
-				y = ybase + n*14
-				if i == pc:
-					painter.fillRect(x, y-1, w, 13, self.pccolor)
-				elif n % 2 == 0:
-					painter.fillRect(x, y-1, w, 13, self.rowaltcolor)
-				else:
-					painter.fillRect(x, y-1, w, 13, self.rowcolor)
-				addr = hex(i).rjust(8, '0')
-				instr = self.parent.mips.mem(i)
-				label = ""
-				if instr.label != None:
-					label = instr.label+':'
-				instrtxt = ""
-				if self.showtype == InternalMemWidget.SHOWTYPE_OP:
-					instrtxt = instr.getopcode()
-				elif self.showtype == InternalMemWidget.SHOWTYPE_ASCII:
-					decoded =  MipsCoder.decode(instr)
-					instrtxt = chr((decoded >> 24) & 0xFF) + chr((decoded >> 16) & 0xFF) + \
-					           chr((decoded >> 8) & 0xFF) + chr((decoded) & 0xFF)
-				elif self.showtype == InternalMemWidget.SHOWTYPE_INT:
-					instrtxt = MipsCoder.decode(instr)
-				elif self.showtype == InternalMemWidget.SHOWTYPE_HEX:
-					instrtxt = hex(MipsCoder.decode(instr))
-
-				addrtxt = "%s %s" % (label.rjust(8), instrtxt)
-				painter.drawText(x, y + 10, "%s %s" % (addr, addrtxt))
-				n += 1
+#	def mousePressEvent(self, event):
+#		lineno = (event.y() - 24) / 12
+#
+#	def mouseDoubleClickEvent(self, event):
+#		lineno = (event.y() - 24) / 12
+#		if event.button() == 1:
+#			pc = self.parent.mips.reg('pc')
+#			self.parent.mips.breakpoints.append(pc/4-(self.h/14/2)+lineno*4)
+#			print hex(self.parent.mips.breakpoints[-1])
+#			self.repaint()
+#
+##	def paintEvent(self, event):
+#			painter = QPainter()
+#			painter.begin(self)
+#			painter.setFont(self.memfont)
+#			
+#			w = event.rect().width()
+#			h = event.rect().height()
+#			self.h = h
+#			self.w = w
+#			painter.fillRect(event.rect(), QBrush(self.backcolor))
+#			pc = self.parent.mips.reg('pc')
+#			instr = self.parent.mips.memoryrange(start=self.scroll - (h/14/2), end=self.scroll + (h/14/2))
+#			ybase = 4 + 20
+#			painter.fillRect(0, ybase-6, w, h, self.rowcolor)
+#			painter.drawLine(0, ybase-6, w, ybase-6)
+#			painter.drawText(4, 14, "Simulator Memory")
+#			n = 0
+#			for i in instr:
+#				x = 0
+#				y = ybase + n*14
+#				if i == pc:
+#					painter.fillRect(x, y-1, w, 13, self.pccolor)
+#				elif n % 2 == 0:
+#					painter.fillRect(x, y-1, w, 13, self.rowaltcolor)
+#				else:
+#					painter.fillRect(x, y-1, w, 13, self.rowcolor)
+#				addr = hex(i).rjust(8, '0')
+#				instr = self.parent.mips.mem(i)
+#				label = ""
+#				if instr.label != None:
+#					label = instr.label+':'
+#				instrtxt = ""
+#				if self.showtype == InternalMemWidget.SHOWTYPE_OP:
+#					instrtxt = instr.getopcode()
+#				elif self.showtype == InternalMemWidget.SHOWTYPE_ASCII:
+#					decoded =  MipsCoder.decode(instr)
+#					instrtxt = chr((decoded >> 24) & 0xFF) + chr((decoded >> 16) & 0xFF) + \
+#					           chr((decoded >> 8) & 0xFF) + chr((decoded) & 0xFF)
+#				elif self.showtype == InternalMemWidget.SHOWTYPE_INT:
+#					instrtxt = MipsCoder.decode(instr)
+#				elif self.showtype == InternalMemWidget.SHOWTYPE_HEX:
+#					instrtxt = hex(MipsCoder.decode(instr))
+#
+#				addrtxt = "%s %s" % (label.rjust(8), instrtxt)
+#				painter.drawText(x, y + 10, "%s %s" % (addr, addrtxt))
+#				n += 1

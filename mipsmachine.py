@@ -66,7 +66,7 @@ class Instruction:
 		return len(self.args)
 
 	def __repr__(self):
-		return '"%X: %s (%s)"' % (self.addr, self.text, "I" if self.fmt == MIPS_I else "J" if self.fmt == MIPS_J else "R")
+		return '"%s (%s)"' % (self.text, "I" if self.fmt == MIPS_I else "J" if self.fmt == MIPS_J else "R")
 
 	@staticmethod
 	def fromfile(filename):
@@ -129,9 +129,10 @@ class MipsMachine:
 
 	def memoryrange(self, start=0, end=0):
 		result = collections.OrderedDict([x*4, 0] for x in range(start, end))
-		#for i in range(start, end, 4):
 		return result
-			
+
+	def memoryat(self, pos):
+		return self.memory[pos]
 
 	def step(self):
 		self.ifstage()
