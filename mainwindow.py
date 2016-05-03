@@ -17,34 +17,38 @@ class MainWindow(QMainWindow):
 		self.codewidget = CodeWidget(self)
 		self.memwidget = MemWidget(self)
 		self.regwidget = RegWidget(self)
-		self.iolabel = QLabel("Output: ")
-		self.iolabel.setMaximumHeight(14)
 		self.iowidget = IOWidget(self)
 		self.statusBar().showMessage("Ready")
 		self.runtimer = QTimer(self)
 		self.runtimer.timeout.connect(self.runtimerTick)
-		self.mainlayout = QVBoxLayout()
-		self.sidelayout = QVBoxLayout()
 
-		self.grid = QHBoxLayout()
+		self.sidewidget = QWidget()
+		self.sidelayout = QVBoxLayout()
+		self.sidewidget.setLayout(self.sidelayout)
+		self.sidelayout.addWidget(self.regwidget)
+		self.sidelayout.addWidget(self.memwidget)
+
+		self.topsplit = QSplitter()
+		self.mainsplit = QSplitter()
+		self.mainsplit.setOrientation(Qt.Vertical)
+		self.grid = QVBoxLayout()
 		self.grid.setSpacing(2)
 		self.widget = QWidget(self)
 		self.widget.setLayout(self.grid)
 		self.setCentralWidget(self.widget)
 
-		self.mainlayout.addWidget(self.codewidget)
-		self.mainlayout.addWidget(self.iolabel)
-		self.mainlayout.addWidget(self.iowidget)
-		self.sidelayout.addWidget(self.regwidget)
-		self.sidelayout.addWidget(self.memwidget)
-		self.grid.addLayout(self.mainlayout)
-		self.grid.addLayout(self.sidelayout)
+		self.topsplit.addWidget(self.codewidget)
+		self.topsplit.addWidget(self.sidewidget)
+		self.mainsplit.addWidget(self.topsplit)
+		self.mainsplit.addWidget(self.iowidget)
+		self.grid.addWidget(self.mainsplit)
 		self.grid.setContentsMargins(0, 0, 0, 0)
 
 		#prefpolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 		#self.setSizePolicy(prefpolicy)
 
 		self.createToolBar()
+		self.createMenuBar()
 
 		self.resize(800, 600)
 		self.move(200, 200)
@@ -67,6 +71,9 @@ class MainWindow(QMainWindow):
 		self.toolbar.addAction(fastrunaction)
 		self.toolbar.addAction(stopaction)
 		self.toolbar.addAction(resetaction)
+
+	def createMenuBar(self):
+		pass
 
 	def reload(self):
 		self.iowidget.reload()
