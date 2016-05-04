@@ -1,0 +1,56 @@
+[{
+  "code": "add",
+  "name": "Signed Addition",
+  "text": "Adds two registers, executes trap on overflow",
+  "args": ["d", "s", "t"]
+},{
+  "code": "addu",
+  "name": "Unsigned Addition",
+  "text": "Adds two registers, ignores overflow",
+  "args": ["d", "s", "t"]
+},{
+  "code": "sub",
+  "name": "Signed Subtraction",
+  "text": "Subtracts two registers, executes trap on overflow",
+  "args": ["d", "s", "t"]
+},{
+  "code": "subu",
+  "name": "Unsigned Subtraction",
+  "text": "Subtracts two registers, ignores overflow",
+  "args": ["d", "s", "t"]
+},{
+  "code": "addi",
+  "name": "Add Immediate",
+  "text": "Adds constant to register, executes trap on overflow",
+  "args": ["d", "s", "C"]
+},{
+  "code": "addiu",
+  "name": "Add Immediate Unsigned",
+  "text": "Adds constant to register, ignores overflow",
+  "args": ["d", "s", "C"]
+},{
+  "code": "mult",
+  "name": "Multiply Signed",
+  "text": "Multiplies Registers, result stored in lo and hi",
+  "args": ["d", "s"]
+},{
+  "code": "mflo",
+  "name": "Move From LO",
+  "text": "Retrieves values from lo register",
+  "args": ["d"]
+},{
+  "code": "mfhi",
+  "name": "Move From HI",
+  "text": "Retrieves values from hi register",
+  "args": ["d"]
+},{
+  "code": "lw",
+  "name": "Load Word",
+  "text": "Loads Word from memory",
+  "args": ["t", "C(s)"]
+},{
+  "code": "sw",
+  "name": "Save Word",
+  "text": "Save Word to memory",
+  "args": ["t", "C(s)"]
+}]
