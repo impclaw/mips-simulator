@@ -25,6 +25,9 @@ class RegListModel(QAbstractListModel):
 			if self.hotregs[reg]:
 				return self.hotcolor
 
+	def flags(self, index):
+		return Qt.ItemIsEnabled
+
 	def clearhotregs(self):
 		self.lastregs = {}
 		self.hotregs = {}

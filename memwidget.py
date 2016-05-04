@@ -76,7 +76,7 @@ class MemListModel(QAbstractTableModel):
 		else: return QVariant()
 
 	def flags(self, index):
-		return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+		return Qt.ItemIsEnabled
 
 class MemWidget(QTableView):
 	SHOWTYPE_OP = 1
