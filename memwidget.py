@@ -174,3 +174,6 @@ class MemWidget(QTableView):
 		self.model.updateStep()
 		self.repaint()
 
+	def sizeHint(self):
+		return QSize(300, 100)
+
