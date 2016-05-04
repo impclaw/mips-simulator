@@ -9,12 +9,14 @@ class OpCode():
 	TYPE_I = 2
 	TYPE_J = 3
 	TYPE_N = 4
+	TYPE_V = 4
 	def __init__(self):
 		self.codetype = OpCode.TYPE_N
 		self.instruction = "nop"
 		self.args = []
 		self.opcode = 0b000000
 		self.function = 0b000000
+		self.virtual = False
 	
 	def __repr__(self):
 		return "%s %s" % (self.instruction, self.args)
@@ -30,6 +32,7 @@ class MipsCoder():
 				tokens = line.split(' ')
 				code.codetype = OpCode.TYPE_R if tokens[0] == 'R' else \
 				                OpCode.TYPE_I if tokens[0] == 'I' else \
+				                OpCode.TYPE_V if tokens[0] == 'V' else \
 				                OpCode.TYPE_J if tokens[0] == 'J' else None
 				code.instruction = tokens[1]
 				code.args = [] if tokens[2].lower() == 'none' else tokens[2].split(',')
@@ -96,6 +99,8 @@ class MipsCoder():
 			return val
 		elif opcode.codetype == OpCode.TYPE_J:
 			return -1
+		elif opcode.codetype == OpCode.TYPE_V:
+			return 0
 		elif opcode.codetype == OpCode.TYPE_N:
 			return 0
 		else:

@@ -52,3 +52,10 @@ I swc1 rt,imm(rs) 111001
 I xori rt,rs,imm 001110
 J j label 000010
 J jal label 000011
+V blt rs,rt,label 000000
+V bgt rs,rt,label 000000
+V ble rs,rt,label 000000
+V move rs,rt 000000
+V li rt,imm 000000
+V sge rd,rs,rt 000000
+V sgt rd,rs,rt 000000
