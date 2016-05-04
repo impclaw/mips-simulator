@@ -22,8 +22,7 @@ class IOWidget(QTabWidget):
 		self.setTabIcon(3, QIcon("icons/console-run.png"))
 	
 	def reload(self):
-		pass
-		#self.setText(self.parent.mips.output)
+		self.iotext.setText(self.parent.mips.output)
 
 class StackWidget(QListView):
 	def __init__(self, parent = None):

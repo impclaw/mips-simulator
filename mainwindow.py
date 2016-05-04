@@ -128,8 +128,7 @@ class MainWindow(QMainWindow):
 	def reload(self):
 		self.iowidget.reload()
 		self.memwidget.update()
-		self.memwidget.repaint()
-		self.regwidget.repaint()
+		self.regwidget.update()
 
 	def toolbarNew(self, e): 
 		pass
@@ -138,9 +137,13 @@ class MainWindow(QMainWindow):
 	def toolbarSave(self, e): 
 		pass
 
-	def toolbarMipsStep(self, e):
+	def mipsStep(self):
 		self.mips.step()
+		self.regwidget.stepupdate()
 		self.reload()
+
+	def toolbarMipsStep(self, e):
+		self.mipsStep()
 
 	def toolbarMipsRun(self, e):
 		self.runtimer.start(100)
@@ -154,11 +157,11 @@ class MainWindow(QMainWindow):
 	def toolbarMipsReset(self, e):
 		self.runtimer.stop()
 		self.mips.reset()
+		self.regwidget.clearhotregs()
 		self.reload()
 
 	def runtimerTick(self):
-		self.mips.step()
-		self.reload()
+		self.mipsStep()
 
 	def closeEvent(self, e):
 		self.memwidget.saveSettings(self.settings)

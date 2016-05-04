@@ -5,13 +5,43 @@ class RegListModel(QAbstractListModel):
 	def __init__(self, mips, parent = None):
 		QAbstractListModel.__init__(self, parent)
 		self.mips = mips
+		self.hotcolor = QColor(255, 210, 210)
+		self.regs = self.mips.allregs()
+		self.regfont = QFont('Monospace', 10)
+		self.clearhotregs()
 
 	def rowCount(self, parent):
-		return len(self.mips.allregs())
+		return len(self.regs)
 
 	def data(self, index, role):
+		reg = self.regs[index.row()]
 		if role == Qt.DisplayRole:
-			return "Non"
+			return "%s: %s" % (reg, str(self.mips.reg(reg)).ljust(8))
+
+		elif role == Qt.FontRole:
+			return self.regfont
+		
+		elif role == Qt.BackgroundRole:
+			if self.hotregs[reg]:
+				return self.hotcolor
+
+	def clearhotregs(self):
+		self.lastregs = {}
+		self.hotregs = {}
+		for r in self.regs:
+			self.lastregs[r] = 0
+			self.hotregs[r] = False
+
+	def stepupdate(self):
+		for r in self.regs:
+			if self.lastregs[r] != self.mips.reg(r):
+				self.hotregs[r] = True
+			else:
+				self.hotregs[r] = False
+			self.lastregs[r] = self.mips.reg(r)
+
+	def update(self):
+		self.dataChanged.emit(self.index(0, 0), self.index(32, 0))
 
 class RegWidget(QListView):
 	def __init__(self, parent = None):
@@ -23,41 +53,21 @@ class RegWidget(QListView):
 		self.regtcolor = QColor(255, 230, 230)
 		self.regscolor = QColor(230, 255, 230)
 		self.regacolor = QColor(230, 230, 250)
-		self.setMaximumHeight(7*32)
-		self.regfont = QFont('Monospace', 10)
-		self.headfont = QFont('Monospace', 12)
 		self.model = RegListModel(self.parent.mips, self)
 		self.setModel(self.model)
 		self.setResizeMode(QListView.Adjust)
-		self.setGridSize(QSize(15, 15))
+		#self.setLayoutMode(QListView.Batched)
+		self.setViewMode(QListView.IconMode)
+		self.setFlow (QListView.TopToBottom)
+		#self.setItemDelegate(RegItemDelegate())
 
-#	def paintEvent(self, event):
-#			painter = QPainter()
-#			painter.begin(self)
-#			painter.setFont(self.regfont)
-#			
-#			w = event.rect().width()
-#			h = event.rect().height()
-#			self.h = h
-#			self.w = w
-#			painter.fillRect(event.rect(), QBrush(self.backcolor))
-#
-#			painter.drawText(4, 14, "Simulator Registers")
-#			ybase = 4 + 20
-#			painter.drawLine(0, ybase-5, w, ybase-5)
-#			n = 0
-#			for reg in self.parent.mips.allregs():
-#				x = 4 if n < 16 else w/2
-#				y = ybase+n*12 if n < 16 else ybase+(n-16)*12
-#
-#				cr = self.regmisccolor
-#				if reg[0] == 't':
-#					cr = self.regtcolor
-#				if reg[0] == 's' and reg != 'sp':
-#					cr = self.regscolor
-#				if (reg[0] == 'a' or reg[0] == 'v') and reg != "at":
-#					cr = self.regacolor
-#				painter.fillRect(0 if n < 16 else w/2, y-2, w/2 if n < 16 else w, 14, cr)
-#
-#				painter.drawText(x, y+8, "%s %d" % ((reg+':').ljust(5), self.parent.mips.reg(reg)))
-#				n += 1
+	def stepupdate(self):
+		self.model.stepupdate()
+
+	def clearhotregs(self):
+		self.model.clearhotregs()
+
+	def update(self):
+		self.model.update()
+		self.repaint()
+
