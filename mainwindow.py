@@ -51,36 +51,92 @@ class MainWindow(QMainWindow):
 		#prefpolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 		#self.setSizePolicy(prefpolicy)
 
-		self.createToolBar()
 		self.createMenuBar()
+		self.createToolBar()
+		self.populateMenuBar()
+		
+	def createMenuBar(self):
+		menubar = self.menuBar()
+		self.filemenu = menubar.addMenu('&File')
+		self.editmenu = menubar.addMenu('&Edit')
+		self.debugmenu = menubar.addMenu('&Debug')
+
+	def populateMenuBar(self):
+		exitaction = QAction("E&xit", self)
+		self.filemenu.addAction(exitaction)
 
 	def createToolBar(self):
-		stepaction = QAction(QIcon("icons/arrow-step.png"), 'Step', self)
+		newaction = QAction(QIcon("icons/document-new.png"), 'New File', self)
+		openaction = QAction(QIcon("icons/document-open.png"), 'Open File', self)
+		saveaction = QAction(QIcon("icons/document-save.png"), 'Save File', self)
+		undoaction = QAction(QIcon("icons/undo.png"), 'Undo', self)
+		redoaction = QAction(QIcon("icons/redo.png"), 'Redo', self)
+		newaction.triggered.connect(self.toolbarNew)
+		openaction.triggered.connect(self.toolbarOpen)
+		saveaction.triggered.connect(self.toolbarSave)
+
+		uploadaction = QAction(QIcon("icons/upload.png"), '&Upload to Simulator', self)
+		stepaction = QAction(QIcon("icons/arrow-step.png"), '&Step', self)
+		runaction = QAction(QIcon("icons/control-run.png"), 'Upload && &Run', self)
+		fastrunaction = QAction(QIcon("icons/control-double.png"), 'Upload && Run &Fast', self)
+		stopaction = QAction(QIcon("icons/control-stop.png"), 'S&top', self)
+		resetaction = QAction(QIcon("icons/control-reset.png"), '&Reset', self)
 		stepaction.triggered.connect(self.toolbarMipsStep)
-		runaction = QAction(QIcon("icons/control-run.png"), 'Run', self)
 		runaction.triggered.connect(self.toolbarMipsRun)
-		fastrunaction = QAction(QIcon("icons/control-double.png"), 'Run Fast', self)
 		fastrunaction.triggered.connect(self.toolbarMipsRunFast)
-		stopaction = QAction(QIcon("icons/control-stop.png"), 'Stop', self)
 		stopaction.triggered.connect(self.toolbarMipsStop)
-		resetaction = QAction(QIcon("icons/control-reset.png"), 'Reset', self)
 		resetaction.triggered.connect(self.toolbarMipsReset)
 
-		self.toolbar = self.addToolBar('Main')
-		self.toolbar.addAction(stepaction)
-		self.toolbar.addAction(runaction)
-		self.toolbar.addAction(fastrunaction)
-		self.toolbar.addAction(stopaction)
-		self.toolbar.addAction(resetaction)
+		newaction.setShortcut(QKeySequence.New)
+		openaction.setShortcut(QKeySequence.Open)
+		saveaction.setShortcut(QKeySequence.Save)
 
-	def createMenuBar(self):
-		pass
+		self.fileToolbar = self.addToolBar('File')
+		self.fileToolbar.addAction(newaction)
+		self.fileToolbar.addAction(openaction)
+		self.fileToolbar.addAction(saveaction)
+		self.fileToolbar.addSeparator()
+		self.fileToolbar.addAction(undoaction)
+		self.fileToolbar.addAction(redoaction)
+		self.fileToolbar.addSeparator()
+		self.debugToolbar = self.addToolBar('Debugging')
+		self.debugToolbar.addAction(uploadaction)
+		self.debugToolbar.addAction(runaction)
+		self.debugToolbar.addAction(fastrunaction)
+		self.debugToolbar.addAction(stopaction)
+		self.debugToolbar.addSeparator()
+		self.debugToolbar.addAction(stepaction)
+		self.debugToolbar.addAction(resetaction)
+		self.fileToolbar.setMovable(False)
+		self.fileToolbar.setFloatable(False)
+		self.debugToolbar.setMovable(False)
+		self.debugToolbar.setFloatable(False)
+
+		self.filemenu.addAction(newaction)
+		self.filemenu.addAction(openaction)
+		self.filemenu.addAction(saveaction)
+		self.editmenu.addAction(undoaction)
+		self.editmenu.addAction(redoaction)
+		self.debugmenu.addAction(uploadaction)
+		self.debugmenu.addAction(runaction)
+		self.debugmenu.addAction(fastrunaction)
+		self.debugmenu.addAction(stopaction)
+		self.debugmenu.addSeparator()
+		self.debugmenu.addAction(stepaction)
+		self.debugmenu.addAction(resetaction)
 
 	def reload(self):
 		self.iowidget.reload()
 		self.memwidget.update()
 		self.memwidget.repaint()
 		self.regwidget.repaint()
+
+	def toolbarNew(self, e): 
+		pass
+	def toolbarOpen(self, e): 
+		pass
+	def toolbarSave(self, e): 
+		pass
 
 	def toolbarMipsStep(self, e):
 		self.mips.step()
@@ -105,6 +161,7 @@ class MainWindow(QMainWindow):
 		self.reload()
 
 	def closeEvent(self, e):
+		self.memwidget.saveSettings(self.settings)
 		self.settings.mainwindowwidth(self.width())
 		self.settings.mainwindowheight(self.height())
 		self.settings.mainwindowx(self.x())

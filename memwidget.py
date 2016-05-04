@@ -86,11 +86,9 @@ class MemWidget(QTableView):
 	def __init__(self, parent = None):
 		QWidget.__init__(self, parent)
 		self.parent = parent
-		self.followpc = False
 		self.scroll = 0
-		self.setupmenu()
-		self.showtype = MemWidget.SHOWTYPE_OP
-		self.menushowop.setChecked(True)
+		self.followpc = self.parent.settings.memfollowpc()
+		self.showtype = self.parent.settings.memshowtype()
 		self.model = MemListModel(self.parent.mips, self)
 		self.setModel(self.model)
 		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -103,6 +101,7 @@ class MemWidget(QTableView):
 		self.verticalHeader().setVisible(False)
 		self.verticalHeader().setDefaultSectionSize(16)
 		self.horizontalHeader().setStretchLastSection(True)
+		self.setupmenu()
 
 	def setupmenu(self):
 		self.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -131,6 +130,16 @@ class MemWidget(QTableView):
 		self.menushowascii.triggered.connect(self.menuShowAsciiClicked)
 		self.menushowint.triggered.connect(self.menuShowIntClicked)
 		self.menushowhex.triggered.connect(self.menuShowHexClicked)
+		if self.showtype == MemWidget.SHOWTYPE_OP:
+			self.menuShowOpClicked(True)
+		elif self.showtype == MemWidget.SHOWTYPE_ASCII:
+			self.menuShowAsciiClicked(True)
+		elif self.showtype == MemWidget.SHOWTYPE_INT:
+			self.menuShowIntClicked(True)
+		elif self.showtype == MemWidget.SHOWTYPE_HEX:
+			self.menuShowHexClicked(True)
+		if self.followpc:
+			self.menufollowpc.setChecked(True)
 
 	def menuFollowPCClicked(self, checked):
 		self.followpc = checked
@@ -147,21 +156,25 @@ class MemWidget(QTableView):
 		self.showtype = MemWidget.SHOWTYPE_OP
 		self.uncheckShow()
 		self.menushowop.setChecked(True)
+		self.update()
 
 	def menuShowAsciiClicked(self, checked):
 		self.showtype = MemWidget.SHOWTYPE_ASCII
 		self.uncheckShow()
 		self.menushowascii.setChecked(True)
+		self.update()
 
 	def menuShowIntClicked(self, checked):
 		self.showtype = MemWidget.SHOWTYPE_INT
 		self.uncheckShow()
 		self.menushowint.setChecked(True)
+		self.update()
 
 	def menuShowHexClicked(self, checked):
 		self.showtype = MemWidget.SHOWTYPE_HEX
 		self.uncheckShow()
 		self.menushowhex.setChecked(True)
+		self.update()
 
 	def contextMenu(self, point):
 		gpoint = self.mapToGlobal(point)
@@ -170,10 +183,16 @@ class MemWidget(QTableView):
 
 	def update(self):
 		pc = self.parent.mips.reg("pc")
-		self.scrollTo(self.model.index(pc/4, 0), QAbstractItemView.PositionAtCenter)
+		self.model.setShowType(self.showtype)
+		if self.followpc:
+			self.scrollTo(self.model.index(pc/4, 0), QAbstractItemView.PositionAtCenter)
 		self.model.updateStep()
 		self.repaint()
 
 	def sizeHint(self):
 		return QSize(300, 100)
+		
+	def saveSettings(self, settings):
+		settings.memshowtype(self.showtype)
+		settings.memfollowpc(self.followpc)
 
