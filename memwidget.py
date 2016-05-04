@@ -3,75 +3,77 @@ from PyQt4.QtCore import *
 from mipscoder import MipsCoder
 from __builtin__ import hex
 
-#class MemWidget(QWidget):
-#	def __init__(self, parent):
-#		QWidget.__init__(self, parent)
-#		self.parent = parent
-#		self.vb = QHBoxLayout()
-#		self.setLayout(self.vb)
-#		self.scroll = QScrollBar()
-#		self.memwidget = InternalMemWidget(parent)
-#		self.vb.addWidget(self.memwidget)
-#		self.vb.addWidget(self.scroll)
-#		self.vb.setContentsMargins(0, 0, 0, 0)
-#		self.scroll.setMinimum(0)
-#		self.update()
-#		self.scroll.valueChanged.connect(self.scrolled)
-#
-#	def scrolled(self):
-#		self.memwidget.scroll = self.scroll.value()
-#		self.memwidget.repaint()
-#
-#	def update(self):
-#		self.scroll.setMaximum(len(self.parent.mips.memory))
-#		value = self.scroll.value()
-#		if self.memwidget.followpc:
-#			pc = self.parent.mips.reg("pc")
-#			value = pc / 4
-#		self.scroll.setValue(value)
-#		self.memwidget.scroll = self.scroll.value()
-
 class MemListModel(QAbstractTableModel):
 	def __init__(self, mips, parent = None):
 		QAbstractTableModel.__init__(self, parent)
 		self.mips = mips
-		self.showtype = MemWidget.SHOWTYPE_INT
+		self.showtype = MemWidget.SHOWTYPE_OP
+		self.codefont = QFont('Monospace', 10)
+		self.backcolor = QColor(255, 255, 255)
+		self.textcolor = QColor(0, 0, 0)
+		self.rowcolor = QColor(255, 255, 210)
+		self.rowaltcolor = QColor(240, 240, 190)
+		self.pccolor = QColor(210, 210, 250)
 
 	def rowCount(self, parent):
 		return len(self.mips.memory)
 
 	def columnCount(self, parent):
-		return 4
+		return 3
 
 	def setShowType(self, showtype):
-		pass
+		self.showtype = showtype
+
+	def updateStep(self):
+		pc = self.mips.reg("pc")
+		self.dataChanged.emit(self.index(pc/4-1, 0), self.index(pc/4+1, 2))
 
 	def data(self, index, role):
 		#print index.column(), index.row()
-		instr = self.mips.memoryat(index.row()*4)
-		if index.column() == 0:
-			return hex(index.row()*4)
-		elif index.column() == 1:
-			return instr.label+':' if instr.label != None else ""
-		elif index.column() == 2:
-			instrtxt = ""
-			if self.showtype == MemWidget.SHOWTYPE_OP:
-				instrtxt = instr.getopcode()
-			elif self.showtype == MemWidget.SHOWTYPE_ASCII:
-				decoded =  MipsCoder.decode(instr)
-				instrtxt = chr((decoded >> 24) & 0xFF) + chr((decoded >> 16) & 0xFF) + \
-						   chr((decoded >> 8) & 0xFF) + chr((decoded) & 0xFF)
-			elif self.showtype == MemWidget.SHOWTYPE_INT:
-				instrtxt = MipsCoder.decode(instr)
-			elif self.showtype == MemWidget.SHOWTYPE_HEX:
-				instrtxt = hex(MipsCoder.decode(instr))
-			return instrtxt
+		if role == Qt.DisplayRole:
+			instr = self.mips.memoryat(index.row()*4)
+			if index.column() == 0:
+				return '0x%08X' % (index.row()*4)
+			elif index.column() == 1:
+				return instr.label+':' if instr.label != None else ""
+			elif index.column() == 2:
+				instrtxt = ""
+				if self.showtype == MemWidget.SHOWTYPE_OP:
+					instrtxt = instr.getopcode()
+				elif self.showtype == MemWidget.SHOWTYPE_ASCII:
+					decoded =  MipsCoder.decode(instr)
+					instrtxt = chr((decoded >> 24) & 0xFF) + chr((decoded >> 16) & 0xFF) + \
+							   chr((decoded >> 8) & 0xFF) + chr((decoded) & 0xFF)
+				elif self.showtype == MemWidget.SHOWTYPE_INT:
+					instrtxt = MipsCoder.decode(instr)
+				elif self.showtype == MemWidget.SHOWTYPE_HEX:
+					instrtxt = '0x%08X' % MipsCoder.decode(instr)
+				return instrtxt
+			else:
+				return None
+		elif role == Qt.FontRole:
+			return self.codefont
+		elif role == Qt.BackgroundRole:
+			if self.mips.reg("pc") / 4 == index.row():
+				return self.pccolor
+			if index.row() % 2 == 0:
+				return self.rowcolor
+			else:
+				return self.rowaltcolor
+		else:
+			return None
 
 	def headerData(self, section, orientation, role):
-		if section == 0: return "Address"
-		if section == 1: return "Label"
-		if section == 2: return "Contents"
-		pass
+		if role == Qt.DisplayRole:
+			if orientation == Qt.Horizontal:
+				if section == 0: return "Address"
+				elif section == 1: return "Label"
+				elif section == 2: return "Contents"
+				else: return QVariant()
+		elif role == Qt.SizeHintRole:
+			pass
+			#if section == 0: return QSize(50, 10)
+		else: return QVariant()
 
 	def flags(self, index):
 		return Qt.ItemIsEnabled | Qt.ItemIsSelectable
@@ -86,11 +88,6 @@ class MemWidget(QTableView):
 		self.parent = parent
 		self.followpc = False
 		self.scroll = 0
-		self.backcolor = QColor(255, 255, 255)
-		self.textcolor = QColor(0, 0, 0)
-		self.rowcolor = QColor(255, 255, 210)
-		self.rowaltcolor = QColor(240, 240, 190)
-		self.pccolor = QColor(210, 210, 250)
 		self.setupmenu()
 		self.showtype = MemWidget.SHOWTYPE_OP
 		self.menushowop.setChecked(True)
@@ -98,8 +95,14 @@ class MemWidget(QTableView):
 		self.setModel(self.model)
 		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.setShowGrid(False)
-		self.verticalHeader().setVisible(False)
 		self.setFont(QFont('Monospace', 10))
+		self.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.setColumnWidth(0, 90)
+		self.setColumnWidth(2, 150)
+		self.setRowHeight(0, 20)
+		self.verticalHeader().setVisible(False)
+		self.verticalHeader().setDefaultSectionSize(16)
+		self.horizontalHeader().setStretchLastSection(True)
 
 	def setupmenu(self):
 		self.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -131,7 +134,7 @@ class MemWidget(QTableView):
 
 	def menuFollowPCClicked(self, checked):
 		self.followpc = checked
-		self.parent.memwidget.update()
+		self.update()
 
 	def uncheckShow(self):
 		self.menushowop.setChecked(False)
@@ -164,6 +167,12 @@ class MemWidget(QTableView):
 		gpoint = self.mapToGlobal(point)
 		point = QPoint(gpoint.x()+2, gpoint.y()+2)
 		self.popMenu.exec_(point) 
+
+	def update(self):
+		pc = self.parent.mips.reg("pc")
+		self.scrollTo(self.model.index(pc/4, 0), QAbstractItemView.PositionAtCenter)
+		self.model.updateStep()
+		self.repaint()
 
 #	def mousePressEvent(self, event):
 #		lineno = (event.y() - 24) / 12
