@@ -75,7 +75,7 @@ class MainWindow(QMainWindow):
 		openaction.triggered.connect(self.toolbarOpen)
 		saveaction.triggered.connect(self.toolbarSave)
 
-		uploadaction = QAction(QIcon("icons/upload.png"), '&Upload to Simulator', self)
+		uploadaction = QAction(QIcon("icons/processor.png"), '&Upload to Simulator', self)
 		stepaction = QAction(QIcon("icons/arrow-step.png"), '&Step', self)
 		runaction = QAction(QIcon("icons/control-run.png"), 'Upload && &Run', self)
 		fastrunaction = QAction(QIcon("icons/control-double.png"), 'Upload && Run &Fast', self)
