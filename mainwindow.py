@@ -48,6 +48,9 @@ class MainWindow(QMainWindow):
 		self.grid.addWidget(self.mainsplit)
 		self.grid.setContentsMargins(0, 0, 0, 0)
 
+		self.openfilename = None
+		self.newfile = True
+
 		#prefpolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 		#self.setSizePolicy(prefpolicy)
 
@@ -130,8 +133,20 @@ class MainWindow(QMainWindow):
 		self.memwidget.update()
 		self.regwidget.update()
 
+	def confirmSaveChanges(self):
+		mb = QMessageBox(self)
+		mb.setText("You have unsaved changes, would you like to save?")
+		mb.setWindowTitle("Unsaved Changes")
+		mb.setIcon(QMessageBox.Information)
+		mb.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+		return mb.exec_()
+
+
 	def toolbarNew(self, e): 
-		pass
+		if self.newfile == True and self.codewidget.changed:
+			response = self.confirmSaveChanges()
+			print response
+
 	def toolbarOpen(self, e): 
 		pass
 	def toolbarSave(self, e): 

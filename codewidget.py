@@ -47,3 +47,8 @@ class CodeWidget(QTextEdit):
 		self.smallbold = QFont("Monospace", 10, QFont.Bold)
 		self.syntax = SyntaxHighlighter(self)
 		self.setAcceptRichText(False)
+		self.changed = False
+
+	def keyPressEvent(self, event):
+		QTextEdit.keyPressEvent(self, event)
+		self.changed = True
