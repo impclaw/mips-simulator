@@ -21,6 +21,7 @@ class OpCode():
 
 class MipsCoder():
 	opcodes = []
+	instrlist = []
 	@staticmethod
 	def initialize(codefile):
 		with open(codefile, 'r') as f:
@@ -39,6 +40,15 @@ class MipsCoder():
 				else:
 					code.opcode = rawopcode
 				MipsCoder.opcodes.append(code)
+				MipsCoder.instrlist.append(code.instruction)
+
+	@staticmethod
+	def instructions():
+		return MipsCoder.instrlist
+
+	@staticmethod
+	def regs():
+		return MIPS_REGS
 
 	@staticmethod
 	def decode(instr):
