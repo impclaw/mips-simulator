@@ -9,20 +9,28 @@ class IOWidget(QTabWidget):
 		self.iotext = QTextEdit()
 		self.iotext.setReadOnly(True)
 		self.iotext.setFont(self.iofont)
+		self.output = QTextEdit()
+		self.output.setReadOnly(True)
+		self.output.setFont(self.iofont)
 		self.immediate = QTextEdit()
 		self.callstack = StackWidget()
 		self.buttons = ButtonWidget()
+		self.addTab(self.output, "Output")
 		self.addTab(self.iotext, "Console")
 		self.addTab(self.callstack, "Stack")
 		self.addTab(self.buttons, "Physical Hardware")
 		self.addTab(self.immediate, "Immediate")
-		self.setTabIcon(0, QIcon("icons/console.png"))
-		self.setTabIcon(1, QIcon("icons/memory.png"))
-		self.setTabIcon(2, QIcon("icons/processor.png"))
-		self.setTabIcon(3, QIcon("icons/console-run.png"))
+		#self.setTabIcon(0, QIcon("icons/console.png"))
+		self.setTabIcon(1, QIcon("icons/console.png"))
+		self.setTabIcon(2, QIcon("icons/memory.png"))
+		self.setTabIcon(3, QIcon("icons/processor.png"))
+		self.setTabIcon(4, QIcon("icons/console-run.png"))
 	
 	def reload(self):
 		self.iotext.setText(self.parent.mips.output)
+
+	def outputmessage(self, text):
+		self.output.append(text)
 
 class StackWidget(QListView):
 	def __init__(self, parent = None):

@@ -19,6 +19,11 @@ MIPS_REGS = ('zero', 'at', 'v0', 'v1', 'a0', 'a1', 'a2', 'a3', 't0', 't1',
              's4', 's5', 's6', 's7', 't8', 't9', 'k0', 'k1', 'gp', 'sp', 
              'fp', 'ra')
 
+class MipsException(Exception):
+	def __init__(self, message, lineno = None):
+		super(Exception, self).__init__(message)
+		self.lineno = lineno
+
 #Every line of code except empty is an instruction
 class Instruction:
 	def __init__(self, code, label = None):
@@ -40,6 +45,7 @@ class Instruction:
 			self.fmt = MIPS_J
 		else: 
 			self.fmt = MIPS_R
+
 			
 			#self.cmd, self.args = self.text.split(' ', 1)
 			#self.args = [x.strip() for x in self.args.split(',')]
@@ -69,42 +75,49 @@ class Instruction:
 		return '"%s (%s)"' % (self.text, "I" if self.fmt == MIPS_I else "J" if self.fmt == MIPS_J else "R")
 
 	@staticmethod
-	def fromfile(filename):
-		instr = []
+	def fromstring(mipstext):
+		instrlst = []
 		mode = 0
 		curline = 0x0000
 		lastlabel = None
+		for line in mipstext.strip().split('\n'):
+			line = line.strip()
+			if len(line) == 0:
+				continue
+			curline += 1
+			print curline, line
+			if line.startswith('.data'):
+				mode = MODE_DATA
+				continue
+			elif line.startswith('.text'):
+				mode = MODE_TEXT
+				continue
+			if mode == 0:
+				raise MipsException("Text outside .data or .text block", curline)
+			if mode == MODE_TEXT:
+				if ':' in line:
+					label, line = line.split(':', 1)
+					lastlabel = label
+					if line == "":
+						continue
+				instr = Instruction(line, lastlabel)
+				if MipsCoder.validate(instr):
+					instrlst.append(Instruction(line, lastlabel))
+				else:
+					raise MipsException("Invalid instruction or argument", curline)
+				lastlabel = None
+		return instrlst
+		
+	@staticmethod
+	def fromfile(filename):
 		with open(filename, 'r') as f:
-			for line in f:
-				line = line.strip()
-				if len(line) == 0:
-					continue
-				if line.startswith('.data'):
-					mode = MODE_DATA
-					continue
-				elif line.startswith('.text'):
-					mode = MODE_TEXT
-					continue
-				if mode == 0:
-					exit("Text outside .data or .text block")
-				if mode == MODE_TEXT:
-					if ':' in line:
-						label, line = line.split(':', 1)
-						lastlabel = label
-						if line == "":
-							curline += 1
-							continue
-					instr.append(Instruction(line, lastlabel))
-					lastlabel = None
-				curline += 1
-		return instr
-
+			return Instruction.formstring(f.read())
 
 class MipsMachine:
-	def __init__(self, iset):
+	def __init__(self):
 		self.nopinstr = Instruction("nop")
 		self.maxinstr = 0x1ffc
-		self.rawiset = iset
+		self.rawiset = []
 		self.reset()
 
 	def reset(self):
@@ -123,6 +136,10 @@ class MipsMachine:
 			curline += 4
 		self.regs = {}
 		self.regs["pc"] = 0x1000
+
+	def load(self, instr):
+		self.rawiset = instr
+		self.reset()
 
 	def allregs(self):
 		return MIPS_REGS

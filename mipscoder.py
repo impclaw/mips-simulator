@@ -54,6 +54,10 @@ class MipsCoder():
 		return MIPS_REGS
 
 	@staticmethod
+	def validate(instr):
+		return True if MipsCoder.decode(instr) != None else False
+
+	@staticmethod
 	def decode(instr):
 		opcodes = [x for x in MipsCoder.opcodes if x.instruction == instr.cmd]
 		if len(opcodes) != 1:
@@ -100,7 +104,7 @@ class MipsCoder():
 		elif opcode.codetype == OpCode.TYPE_J:
 			return -1
 		elif opcode.codetype == OpCode.TYPE_V:
-			return 0
+			return None
 		elif opcode.codetype == OpCode.TYPE_N:
 			return 0
 		else:

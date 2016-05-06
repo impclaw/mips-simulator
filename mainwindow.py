@@ -1,6 +1,6 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-from mipsmachine import MipsMachine, Instruction
+from mipsmachine import MipsMachine, Instruction, MipsException
 from regwidget import RegWidget
 from codewidget import CodeWidget
 from memwidget import MemWidget
@@ -13,8 +13,7 @@ class MainWindow(QMainWindow):
 		QMainWindow.__init__(self, parent)
 		self.settings = Settings()
 		self.setWindowTitle("MIPS Simulator")
-		instr = Instruction.fromfile('tests/test1.s')
-		self.mips = MipsMachine(instr)
+		self.mips = MipsMachine()
 		self.codewidget = CodeWidget(self)
 		self.memwidget = MemWidget(self)
 		self.regwidget = RegWidget(self)
@@ -57,6 +56,7 @@ class MainWindow(QMainWindow):
 		self.createMenuBar()
 		self.createToolBar()
 		self.populateMenuBar()
+		self.openFile('tests/test1.s')
 		
 	def createMenuBar(self):
 		menubar = self.menuBar()
@@ -84,6 +84,7 @@ class MainWindow(QMainWindow):
 		fastrunaction = QAction(QIcon("icons/control-double.png"), 'Upload && Run &Fast', self)
 		stopaction = QAction(QIcon("icons/control-stop.png"), 'S&top', self)
 		resetaction = QAction(QIcon("icons/control-reset.png"), '&Reset', self)
+		uploadaction.triggered.connect(self.toolbarMipsUpload)
 		stepaction.triggered.connect(self.toolbarMipsStep)
 		runaction.triggered.connect(self.toolbarMipsRun)
 		fastrunaction.triggered.connect(self.toolbarMipsRunFast)
@@ -134,27 +135,73 @@ class MainWindow(QMainWindow):
 		self.regwidget.update()
 
 	def confirmSaveChanges(self):
-		mb = QMessageBox(self)
-		mb.setText("You have unsaved changes, would you like to save?")
-		mb.setWindowTitle("Unsaved Changes")
-		mb.setIcon(QMessageBox.Information)
-		mb.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
-		return mb.exec_()
+		return QMessageBox.question(self, "Unsaved Changes", "You have unsaved changes, would you like to save?", QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel);
 
+	def saveFile(self, filename):
+		with open(filename, 'w') as f:
+			f.write(self.codewidget.toPlainText())
+		self.openfilename = filename
+		self.newfile = False
+		self.codewidget.changed = False
+
+	def openFile(self, filename):
+		with open(filename, 'r') as f:
+			self.codewidget.setText(f.read())
+		self.openfilename = filename
+		self.newfile = False
+		self.codewidget.changed = False
+
+	def saveAsDialog(self):
+		filename = QFileDialog.getSaveFileName(self, "Save file", "", "*.s")
+		if filename != '':
+			self.saveFile(filename)
 
 	def toolbarNew(self, e): 
-		if self.newfile == True and self.codewidget.changed:
+		if self.codewidget.changed:
 			response = self.confirmSaveChanges()
-			print response
+			if response == QMessageBox.Yes: 
+				self.toolbarSave(e)
+			elif response == QMessageBox.No:
+				self.codewidget.setText("")
+			else:
+				return
+		else:
+			self.codewidget.setText("")
+		self.openfilename = None
+		self.newfile = True
+		self.codewidget.changed = False
 
 	def toolbarOpen(self, e): 
-		pass
+		if self.codewidget.changed:
+			response = self.confirmSaveChanges()
+			if response == QMessageBox.Yes: 
+				self.toolbarSave(e)
+			elif response == QMessageBox.Cancel:
+				return
+		filename = QFileDialog.getOpenFileName(self, "Open file", "", "*.s")
+		if filename != '':
+			self.openFile(filename)
+
 	def toolbarSave(self, e): 
-		pass
+		if self.codewidget.changed and self.openfilename == None:
+			self.saveAsDialog()
+		elif self.codewidget.changed and self.openfilename != None:
+			self.saveFile(self.openfilename)
 
 	def mipsStep(self):
 		self.mips.step()
 		self.regwidget.stepupdate()
+		self.reload()
+
+	def toolbarMipsUpload(self, e):
+		self.iowidget.outputmessage("Uploading to MIPS Processor...")
+		try:
+			instr = Instruction.fromstring(str(self.codewidget.toPlainText()))
+			self.mips.load(instr)
+			self.iowidget.outputmessage("Upload Successful")
+		except MipsException as e:
+			self.iowidget.outputmessage("%d: %s" % (e.lineno, e.message))
+		self.iowidget.outputmessage("")
 		self.reload()
 
 	def toolbarMipsStep(self, e):
