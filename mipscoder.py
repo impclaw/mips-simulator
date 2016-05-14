@@ -58,6 +58,27 @@ class MipsCoder():
 		return True if MipsCoder.decode(instr) != None else False
 
 	@staticmethod
+	def devirtualize(instr):
+		from mipsmachine import Instruction, MipsException
+		if instr.cmd == "li":
+			if len(instr.args) != 2:
+				raise MipsException("Invalid virtual instruction")
+			reg = instr.args[0]
+			imm = int(instr.args[1])
+			if imm > 65535:
+				instra = Instruction('lui %s,%d' % (reg, (imm & 0xFFFF0000) >> 16), instr.label)
+				instrb = Instruction('ori %s,%s,%d' % (reg, reg, imm & 0x0000FFFF))
+				print instra, instrb
+				return [instra, instrb]
+			else:
+				return [Instruction('ori %s,%s,%d' % (reg, reg, imm), instr.label)]
+		elif instr.cmd == "move":
+			if len(instr.args) != 2:
+				raise MipsException("Invalid virtual instruction")
+			return [Instruction('add %s,%s,zero' % (instr.args[0], instr.args[1]))]
+		return [instr]
+
+	@staticmethod
 	def decode(instr):
 		opcodes = [x for x in MipsCoder.opcodes if x.instruction == instr.cmd]
 		if len(opcodes) != 1:

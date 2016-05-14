@@ -7,7 +7,7 @@ MODE_TEXT = 2
 MIPS_R = 1
 MIPS_I = 2
 MIPS_J = 3
-MIPS_ILIST = ["li", "addi", "slti", "andi", "ori", "xori", "sll", "srl"]
+MIPS_ILIST = ["addi", "slti", "andi", "ori", "xori", "sll", "srl", "lui", "la"]
 MIPS_AL = {'add' : '+', 'addi' : '+', 'sub' : '-', 'subi' : '-', 
            'and' : '&', 'andi' : '&', 'or'  : '|', 'ori'  : '|',    
            'xor': '^', 'xori': '^', 'rem': '%', 'sll': '<<', 'srl': '>>', 
@@ -85,7 +85,6 @@ class Instruction:
 			if len(line) == 0:
 				continue
 			curline += 1
-			print curline, line
 			if line.startswith('.data'):
 				mode = MODE_DATA
 				continue
@@ -100,11 +99,11 @@ class Instruction:
 					lastlabel = label
 					if line == "":
 						continue
-				instr = Instruction(line, lastlabel)
-				if MipsCoder.validate(instr):
-					instrlst.append(Instruction(line, lastlabel))
-				else:
-					raise MipsException("Invalid instruction or argument", curline)
+				phylst = MipsCoder.devirtualize(Instruction(line, lastlabel))
+				for i in phylst:
+					if not MipsCoder.validate(i):
+						raise MipsException("Invalid instruction or argument", curline)
+				instrlst += phylst
 				lastlabel = None
 		return instrlst
 		
@@ -174,7 +173,7 @@ class MipsMachine:
 			self.regsrc2 = self.reg(i.regarg(2))
 			self.regdst = i.regarg(0)
 		elif i.fmt == MIPS_I:
-			if i.cmd == "li":
+			if i.cmd == "lui":
 				self.regbase = i.regarg(0)
 				self.imm = i.intarg(1)
 			else:
@@ -188,8 +187,8 @@ class MipsMachine:
 		i = self.instruction
 		if i.cmd == "nop":
 			pass
-		elif i.cmd == "li": #li syntetic ori lui
-			self.result = self.imm
+		elif i.cmd == "lui":
+			self.result = (self.imm << 16 & 0xFFFF0000) + (self.reg(self.regbase) & 0x0000FFFF)
 		elif i.cmd == "slti": #single case so no generic matching
 			self.result = 1 if self.regaux < self.imm else 0
 		elif i.cmd == "div": #div has variable arguments
