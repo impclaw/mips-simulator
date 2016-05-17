@@ -131,3 +131,9 @@ class MipsCoder():
 		else:
 			return None
 
+	@staticmethod
+	def encode(data):
+		opcode = data >> 26
+		print bin(data)
+		print bin(opcode)
+

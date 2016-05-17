@@ -81,6 +81,8 @@ class Instruction:
 		curline = 0x0000
 		lastlabel = None
 		for line in mipstext.strip().split('\n'):
+			if '#' in line:
+				line = line.split("#", 1)[0]
 			line = line.strip()
 			if len(line) == 0:
 				continue
@@ -93,18 +95,32 @@ class Instruction:
 				continue
 			if mode == 0:
 				raise MipsException("Text outside .data or .text block", curline)
-			if mode == MODE_TEXT:
+			else:
 				if ':' in line:
 					label, line = line.split(':', 1)
 					lastlabel = label
 					if line == "":
 						continue
-				phylst = MipsCoder.devirtualize(Instruction(line, lastlabel))
-				for i in phylst:
-					if not MipsCoder.validate(i):
-						raise MipsException("Invalid instruction or argument", curline)
-				instrlst += phylst
-				lastlabel = None
+				if mode == MODE_DATA:
+					tokens = [x.strip() for x in line.strip().split(' ', 1)]
+					if len(tokens) < 2:
+						raise MipsException("Invalid data declaration", curline)
+					if tokens[0] == ".asciiz":
+						rawdata = [ord(x) for x in list(tokens[1])]
+						data = [0]*(len(rawdata)/4)
+						for x in range(0, len(data), 4):
+							data[x/4] = (rawdata[x] << 24) + (rawdata[x+1] << 16) \
+							            + (rawdata[x+2] << 8) + rawdata[x+3]
+					if tokens[0] == ".word":
+						data = int(tokens[1])
+						print MipsCoder.encode(data)
+				if mode == MODE_TEXT:
+					phylst = MipsCoder.devirtualize(Instruction(line, lastlabel))
+					for i in phylst:
+						if not MipsCoder.validate(i):
+							raise MipsException("Invalid instruction or argument", curline)
+					instrlst += phylst
+					lastlabel = None
 		return instrlst
 		
 	@staticmethod
