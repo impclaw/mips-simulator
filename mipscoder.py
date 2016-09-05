@@ -93,6 +93,8 @@ class MipsCoder():
 		for i in range(len(opcode.args)):
 			args[opcode.args[i]] = instr.args[i]
 			if opcode.args[i] in ('rt', 'rs', 'sa', 'rd'):
+				if instr.args[i] not in MIPS_REGS:
+					return None
 				argvals[opcode.args[i]] = MIPS_REGS.index(instr.args[i])
 			if opcode.args[i] in ('imm'):
 				try:
