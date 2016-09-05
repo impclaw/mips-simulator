@@ -34,6 +34,7 @@ class Instruction:
 		self.label = label
 		self.raw = self.text.split(' ', 1)
 		self.cmd = self.raw[0].lower()
+		self.labeladdress = None
 		if len(self.raw) > 1:
 			self.args = [x.strip().lower() for x in self.raw[1].split(',')]
 		else:
@@ -51,6 +52,8 @@ class Instruction:
 			#self.args = [x.strip() for x in self.args.split(',')]
 
 	def getopcode(self):
+		if self.labeladdress != None:
+			return "%s [addr:%s]" % (self.text, hex(self.labeladdress))
 		return self.text
 
 	def getarg(self, n):
@@ -151,10 +154,22 @@ class MipsMachine:
 			curline += 4
 		self.regs = {}
 		self.regs["pc"] = 0x1000
+		self.jumpto = None
+		self.jumparmed = False
 
-	def load(self, instr):
-		self.rawiset = instr
+	def load(self, instructionlist):
+		self.rawiset = instructionlist
 		self.reset()
+		for instr in self.rawiset:
+			lbl = None
+			if instr.fmt == MIPS_J:
+				lbl = self.addrfromlabel(instr.args[0])
+			instr.labeladdress = lbl
+
+	def addrfromlabel(self, label):
+		for k,v in self.memory.items():
+			if v.label == label:
+				return k
 
 	def allregs(self):
 		return MIPS_REGS
@@ -170,13 +185,18 @@ class MipsMachine:
 		self.ifstage()
 		if self.instruction.cmd == "syscall":
 			self.syscall()
-			return
-		if self.instruction.cmd == "nop":
-			return
-		self.idstage()
-		self.exstage()
-		self.memstage()
-		self.wbstage()
+		if self.instruction.cmd != "nop" and self.instruction.cmd != "syscall":
+			self.idstage()
+			self.exstage()
+			self.memstage()
+			self.wbstage()
+		if self.jumpto != None:
+			if self.jumparmed:
+				self.regs["pc"] = self.jumpto
+				self.jumpto = None
+				self.jumparmed = False
+			else:
+				self.jumparmed = True
 
 	def ifstage(self):
 		self.instruction = self.memory[self.regs["pc"]]
@@ -197,12 +217,14 @@ class MipsMachine:
 				self.regaux = self.reg(i.regarg(1))
 				self.imm = i.intarg(2)
 		elif i.fmt == MIPS_J:
-			self.imm = i.intarg(0)
+			self.imm = i.labeladdress
 
 	def exstage(self):
 		i = self.instruction
 		if i.cmd == "nop":
 			pass
+		elif i.cmd == "j":
+			self.jumpto = self.imm
 		elif i.cmd == "lui":
 			self.result = (self.imm << 16 & 0xFFFF0000) + (self.reg(self.regbase) & 0x0000FFFF)
 		elif i.cmd == "slti": #single case so no generic matching
@@ -221,7 +243,6 @@ class MipsMachine:
 		elif i.fmt == MIPS_R and i.cmd in MIPS_AL.keys():
 			self.result = eval(str(self.regsrc1) + ' ' + MIPS_AL[i.cmd] + ' ' + str(self.regsrc2))
 		elif i.fmt == MIPS_I and i.cmd in MIPS_AL.keys():
-			#print i.cmd, str(self.regaux) + ' ' + MIPS_AL[i.cmd] + ' ' + str(self.imm)
 			self.result = eval(str(self.regaux) + ' ' + MIPS_AL[i.cmd] + ' ' + str(self.imm))
 
 	def memstage(self):
